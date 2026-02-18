@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shapira Apartment - 3D Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    background: #1a1a2e;
+    color: #e0e0e0;
+  }
+
+  #canvas-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  canvas { display: block; }
+
+  /* Side Panel */
+  #panel {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 320px;
+    height: 100vh;
+    background: rgba(20, 20, 40, 0.95);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(255,255,255,0.1);
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    padding: 16px;
+  }
+
+  #panel.collapsed {
+    transform: translateX(-320px);
+  }
+
+  #toggle-panel {
+    position: fixed;
+    left: 320px;
+    top: 12px;
+    z-index: 101;
+    background: rgba(20, 20, 40, 0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    font-size: 18px;
+    transition: left 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #toggle-panel.collapsed { left: 0; }
+
+  .panel-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .panel-section:last-child { border-bottom: none; }
+
+  h2 {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8b8bbd;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 16px;
+  }
+
+  /* Room buttons */
+  .room-btn {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: right;
+    transition: all 0.2s;
+  }
+
+  .room-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  .room-btn.active {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+    color: #a5b4fc;
+  }
+
+  .room-btn .dims {
+    font-size: 11px;
+    color: #666;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* Color picker */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .color-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .color-swatch:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  .color-swatch.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  }
+
+  .custom-color {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .custom-color input[type="color"] {
+    width: 36px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: none;
+  }
+
+  .custom-color label {
+    font-size: 12px;
+    color: #888;
+  }
+
+  /* Furniture items */
+  .furniture-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+
+  .furniture-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .furniture-item .icon { font-size: 20px; }
+  .furniture-item .info { flex: 1; margin: 0 10px; text-align: right; }
+  .furniture-item .name { font-weight: 500; }
+  .furniture-item .size { font-size: 11px; color: #666; }
+
+  .add-btn {
+    background: rgba(99, 102, 241, 0.3);
+    border: none;
+    color: #a5b4fc;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .add-btn:hover { background: rgba(99, 102, 241, 0.5); }
+
+  /* View controls */
+  .view-controls {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .view-btn {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #aaa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .view-btn:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+  }
+
+  .view-btn.active {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+  }
+
+  /* Selected furniture info */
+  #selected-info {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 40, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 12px 20px;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  #selected-info.visible { display: flex; }
+
+  #selected-info button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .btn-rotate {
+    background: rgba(99, 102, 241, 0.3);
+    color: #a5b4fc;
+  }
+
+  .btn-delete {
+    background: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+
+  .btn-rotate:hover { background: rgba(99, 102, 241, 0.5); }
+  .btn-delete:hover { background: rgba(239, 68, 68, 0.5); }
+
+  /* Instructions overlay */
+  #instructions {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 40, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 8px 18px;
+    z-index: 90;
+    font-size: 12px;
+    color: #888;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  /* Floor plan mini-map */
+  #minimap {
+    width: 100%;
+    height: 160px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="panel">
+  <div class="panel-section">
+    <h1>Shapira Apartment</h1>
+    <div class="subtitle">Interactive 3D Mockup</div>
+
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <div class="panel-section">
+    <h2>Rooms</h2>
+    <button class="room-btn active" data-room="living" onclick="selectRoom('living')">
+      סלון + מטבח
+      <span class="dims">5.1m x 4.5m (17x15 tiles)</span>
+    </button>
+    <button class="room-btn" data-room="bedroom" onclick="selectRoom('bedroom')">
+      חדר שינה
+      <span class="dims">4.8m x 3.3m (16x11 tiles)</span>
+    </button>
+    <button class="room-btn" data-room="bathroom" onclick="selectRoom('bathroom')">
+      חדר אמבטיה
+      <span class="dims">~1.5m x 2.0m</span>
+    </button>
+    <button class="room-btn" data-room="hallway" onclick="selectRoom('hallway')">
+      מסדרון
+      <span class="dims">~1.2m x 3.3m</span>
+    </button>
+  </div>
+
+  <div class="panel-section">
+    <h2>Wall Color</h2>
+    <div class="color-grid" id="color-grid"></div>
+    <div class="custom-color">
+      <input type="color" id="custom-color" value="#ffffff">
+      <label>Custom color</label>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h2>Furniture</h2>
+    <div id="furniture-list"></div>
+  </div>
+
+  <div class="panel-section">
+    <h2>View</h2>
+    <div class="view-controls">
+      <button class="view-btn" onclick="setView('perspective')">3D</button>
+      <button class="view-btn" onclick="setView('top')">Top</button>
+      <button class="view-btn" onclick="setView('living')">Living</button>
+      <button class="view-btn" onclick="setView('bedroom')">Bedroom</button>
+      <button class="view-btn" onclick="setView('walkthrough')">Walkthrough</button>
+    </div>
+  </div>
+</div>
+
+<button id="toggle-panel" onclick="togglePanel()">◀</button>
+
+<div id="instructions">
+  Drag to rotate | Scroll to zoom | Right-click to pan | Click furniture to select
+</div>
+
+<div id="selected-info">
+  <span id="selected-name"></span>
+  <button class="btn-rotate" onclick="rotateSelected()">Rotate 90°</button>
+  <button class="btn-delete" onclick="deleteSelected()">Delete</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ==================== SCENE SETUP ====================
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+scene.fog = new THREE.FogExp2(0x1a1a2e, 0.02);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(8, 7, 10);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(3, 1.5, 2);
+controls.maxPolarAngle = Math.PI * 0.85;
+
+// ==================== LIGHTING ====================
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+dirLight.position.set(8, 12, 6);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.left = -12;
+dirLight.shadow.camera.right = 12;
+dirLight.shadow.camera.top = 12;
+dirLight.shadow.camera.bottom = -12;
+scene.add(dirLight);
+
+// Warm fill light
+const fillLight = new THREE.DirectionalLight(0xffe0b2, 0.3);
+fillLight.position.set(-4, 6, -3);
+scene.add(fillLight);
+
+// Room lights
+function addPointLight(x, y, z, intensity, color = 0xfff5e6) {
+  const light = new THREE.PointLight(color, intensity, 8);
+  light.position.set(x, y, z);
+  light.castShadow = true;
+  scene.add(light);
+  return light;
+}
+
+addPointLight(2.5, 2.8, 2.25, 0.6); // Living room
+addPointLight(2.4, 2.8, -2.5, 0.5); // Bedroom
+addPointLight(-0.3, 2.8, -2.5, 0.3); // Hallway
+
+// ==================== APARTMENT DIMENSIONS ====================
+const WALL_HEIGHT = 3.2;
+const WALL_THICKNESS = 0.15;
+
+// Room positions (all relative to origin)
+// Living+Kitchen: 5.1m x 4.5m
+const LIVING = { x: 0, z: 0, w: 5.1, d: 4.5 };
+// Bedroom: 4.8m x 3.3m
+const BEDROOM = { x: 1.2, z: -4.5, w: 4.8, d: 3.3 };
+// Hallway: 1.2m x 3.3m
+const HALLWAY = { x: 0, z: -4.5, w: 1.2, d: 3.3 };
+// Bathroom: 1.5m x 2.0m
+const BATHROOM = { x: -1.5, z: -4.5, w: 1.5, d: 2.0 };
+
+// ==================== MATERIALS ====================
+const wallColors = {
+  living: '#f5f0eb',
+  bedroom: '#f5f0eb',
+  bathroom: '#e8e8e8',
+  hallway: '#f5f0eb'
+};
+
+const wallMaterials = {};
+function createWallMaterial(room) {
+  const col = new THREE.Color(wallColors[room]);
+  wallMaterials[room] = new THREE.MeshStandardMaterial({
+    color: col,
+    roughness: 0.85,
+    metalness: 0.0,
+    side: THREE.DoubleSide
+  });
+  return wallMaterials[room];
+}
+
+Object.keys(wallColors).forEach(r => createWallMaterial(r));
+
+const floorMat = new THREE.MeshStandardMaterial({
+  color: 0xd4c5a9,
+  roughness: 0.4,
+  metalness: 0.1
+});
+
+const tileMat = new THREE.MeshStandardMaterial({
+  color: 0xc8c8c8,
+  roughness: 0.3,
+  metalness: 0.0
+});
+
+const doorMat = new THREE.MeshStandardMaterial({
+  color: 0x4a3728,
+  roughness: 0.6,
+  metalness: 0.05
+});
+
+const windowFrameMat = new THREE.MeshStandardMaterial({
+  color: 0xd4c9a8,
+  roughness: 0.5
+});
+
+const glassMat = new THREE.MeshStandardMaterial({
+  color: 0x88bbdd,
+  transparent: true,
+  opacity: 0.3,
+  roughness: 0.1,
+  metalness: 0.2
+});
+
+const ceilingMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.9,
+  metalness: 0.0,
+  side: THREE.DoubleSide
+});
+
+// ==================== WALL BUILDING ====================
+const wallGroups = { living: [], bedroom: [], bathroom: [], hallway: [] };
+
+function makeWall(x, y, z, w, h, d, room, addToScene = true) {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mesh = new THREE.Mesh(geo, wallMaterials[room]);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.room = room;
+  mesh.userData.isWall = true;
+  if (addToScene) scene.add(mesh);
+  wallGroups[room].push(mesh);
+  return mesh;
+}
+
+function makeFloor(x, z, w, d) {
+  const geo = new THREE.PlaneGeometry(w, d);
+  const mesh = new THREE.Mesh(geo, floorMat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(x + w/2, 0, z + d/2);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  // Tile grid lines
+  const gridGeo = new THREE.BufferGeometry();
+  const points = [];
+  const tileSize = 0.3;
+  for (let i = 0; i <= Math.ceil(w / tileSize); i++) {
+    const px = x + i * tileSize;
+    if (px > x + w) break;
+    points.push(px, 0.001, z, px, 0.001, z + d);
+  }
+  for (let j = 0; j <= Math.ceil(d / tileSize); j++) {
+    const pz = z + j * tileSize;
+    if (pz > z + d) break;
+    points.push(x, 0.001, pz, x + w, 0.001, pz);
+  }
+  gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+  const gridMat = new THREE.LineBasicMaterial({ color: 0xbbb5a0, transparent: true, opacity: 0.15 });
+  const grid = new THREE.LineSegments(gridGeo, gridMat);
+  scene.add(grid);
+
+  return mesh;
+}
+
+function makeCeiling(x, z, w, d) {
+  const geo = new THREE.PlaneGeometry(w, d);
+  const mesh = new THREE.Mesh(geo, ceilingMat);
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.set(x + w/2, WALL_HEIGHT, z + d/2);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+function makeWindow(x, y, z, w, h, rotY = 0) {
+  const group = new THREE.Group();
+
+  // Frame
+  const frameThick = 0.05;
+  const topBar = new THREE.Mesh(new THREE.BoxGeometry(w, frameThick, frameThick), windowFrameMat);
+  topBar.position.set(0, h/2, 0);
+  group.add(topBar);
+
+  const bottomBar = new THREE.Mesh(new THREE.BoxGeometry(w, frameThick, frameThick), windowFrameMat);
+  bottomBar.position.set(0, -h/2, 0);
+  group.add(bottomBar);
+
+  const leftBar = new THREE.Mesh(new THREE.BoxGeometry(frameThick, h, frameThick), windowFrameMat);
+  leftBar.position.set(-w/2, 0, 0);
+  group.add(leftBar);
+
+  const rightBar = new THREE.Mesh(new THREE.BoxGeometry(frameThick, h, frameThick), windowFrameMat);
+  rightBar.position.set(w/2, 0, 0);
+  group.add(rightBar);
+
+  const midBar = new THREE.Mesh(new THREE.BoxGeometry(frameThick, h, frameThick), windowFrameMat);
+  midBar.position.set(0, 0, 0);
+  group.add(midBar);
+
+  // Glass panes
+  const glass1 = new THREE.Mesh(new THREE.PlaneGeometry(w/2 - frameThick, h - frameThick), glassMat);
+  glass1.position.set(-w/4, 0, 0);
+  group.add(glass1);
+
+  const glass2 = new THREE.Mesh(new THREE.PlaneGeometry(w/2 - frameThick, h - frameThick), glassMat);
+  glass2.position.set(w/4, 0, 0);
+  group.add(glass2);
+
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+  scene.add(group);
+  return group;
+}
+
+function makeDoor(x, y, z, w, h, rotY = 0, mat = doorMat) {
+  const group = new THREE.Group();
+
+  const door = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), mat);
+  door.position.set(0, h/2, 0);
+  door.castShadow = true;
+  group.add(door);
+
+  // Handle
+  const handle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8),
+    new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 })
+  );
+  handle.rotation.x = Math.PI / 2;
+  handle.position.set(w/2 - 0.1, h * 0.45, 0.04);
+  group.add(handle);
+
+  // Frame
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xd4c9a8, roughness: 0.6 });
+  const leftFrame = new THREE.Mesh(new THREE.BoxGeometry(0.06, h + 0.06, 0.12), frameMat);
+  leftFrame.position.set(-w/2 - 0.03, h/2, 0);
+  group.add(leftFrame);
+
+  const rightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.06, h + 0.06, 0.12), frameMat);
+  rightFrame.position.set(w/2 + 0.03, h/2, 0);
+  group.add(rightFrame);
+
+  const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, 0.06, 0.12), frameMat);
+  topFrame.position.set(0, h + 0.03, 0);
+  group.add(topFrame);
+
+  group.position.set(x, y, z);
+  group.rotation.y = rotY;
+  scene.add(group);
+  return group;
+}
+
+// ==================== BUILD THE APARTMENT ====================
+
+// --- Living Room + Kitchen (5.1m x 4.5m) ---
+// Origin at (0,0,0), extends to (5.1, 0, 4.5)
+makeFloor(0, 0, LIVING.w, LIVING.d);
+makeCeiling(0, 0, LIVING.w, LIVING.d);
+
+// South wall (z=0) - has front door
+makeWall(1.0, WALL_HEIGHT/2, 0, 2.0, WALL_HEIGHT, WALL_THICKNESS, 'living'); // left of door
+makeWall(4.05, WALL_HEIGHT/2, 0, 2.1, WALL_HEIGHT, WALL_THICKNESS, 'living'); // right of door
+makeWall(2.55, WALL_HEIGHT*0.85, 0, 1.1, WALL_HEIGHT*0.3, WALL_THICKNESS, 'living'); // above door
+makeDoor(2.55, 0, 0, 0.9, 2.2);
+
+// North wall (z=4.5) - has window
+makeWall(1.1, WALL_HEIGHT/2, LIVING.d, 2.2, WALL_HEIGHT, WALL_THICKNESS, 'living'); // left of window
+makeWall(4.35, WALL_HEIGHT/2, LIVING.d, 1.5, WALL_HEIGHT, WALL_THICKNESS, 'living'); // right of window
+makeWall(2.85, 0.4, LIVING.d, 1.3, 0.8, WALL_THICKNESS, 'living'); // below window
+makeWall(2.85, WALL_HEIGHT*0.82, LIVING.d, 1.3, WALL_HEIGHT*0.35, WALL_THICKNESS, 'living'); // above window
+makeWindow(2.85, 1.6, LIVING.d, 1.2, 1.2);
+
+// East wall (x=5.1)
+makeWall(LIVING.w, WALL_HEIGHT/2, LIVING.d/2, WALL_THICKNESS, WALL_HEIGHT, LIVING.d, 'living');
+
+// West wall (x=0) - partial, opening to hallway
+makeWall(0, WALL_HEIGHT/2, 3.25, WALL_THICKNESS, WALL_HEIGHT, 2.5, 'living'); // upper section
+makeWall(0, WALL_HEIGHT/2, 0.5, WALL_THICKNESS, WALL_HEIGHT, 1.0, 'living'); // lower section near door
+
+// Divider wall between living and hallway/bedroom (z = 0, south side of living = wall at z=0)
+// The inner wall at z=0 separating from bedroom area below
+makeWall(HALLWAY.w/2, WALL_HEIGHT/2, 0, HALLWAY.w, WALL_HEIGHT, WALL_THICKNESS, 'living'); // hallway entrance left
+
+// --- Hallway (0 to 1.2, z = -4.5 to 0) ---
+makeFloor(HALLWAY.x, HALLWAY.z, HALLWAY.w, HALLWAY.d);
+
+// West wall of hallway
+makeWall(0, WALL_HEIGHT/2, HALLWAY.z + HALLWAY.d/2, WALL_THICKNESS, WALL_HEIGHT, HALLWAY.d, 'hallway');
+
+// --- Bedroom (1.2 to 6.0, z = -4.5 to -1.2) actually let me recalc ---
+// Bedroom starts at x=1.2, z=-3.3 to z=0 (but that overlaps living)
+// Let me reposition: bedroom is SOUTH of the living room
+// Living: z=0 to z=4.5
+// Hallway + Bedroom: z=-3.3 to z=0
+// Bedroom: x=1.2 to x=6.0 (4.8m wide), z=-3.3 to z=0
+
+const BED = { x: 1.2, z: -3.3, w: 4.8, d: 3.3 };
+makeFloor(BED.x, BED.z, BED.w, BED.d);
+makeCeiling(BED.x, BED.z, BED.w, BED.d);
+
+// South wall of bedroom (z = -3.3)
+makeWall(BED.x + BED.w/2, WALL_HEIGHT/2, BED.z, BED.w, WALL_HEIGHT, WALL_THICKNESS, 'bedroom');
+
+// East wall of bedroom (x = 6.0)
+makeWall(BED.x + BED.w, WALL_HEIGHT/2, BED.z + BED.d/2, WALL_THICKNESS, WALL_HEIGHT, BED.d, 'bedroom');
+
+// North wall of bedroom (z=0) - shared with living room south
+// Already partially built, add bedroom side wall with door opening
+makeWall(BED.x + 1.4, WALL_HEIGHT/2, 0, 1.8, WALL_HEIGHT, WALL_THICKNESS, 'bedroom'); // left of door to living
+makeWall(BED.x + BED.w - 0.9, WALL_HEIGHT/2, 0, 1.8, WALL_HEIGHT, WALL_THICKNESS, 'bedroom'); // right section
+makeWall(BED.x + 2.8, WALL_HEIGHT*0.85, 0, 0.8, WALL_HEIGHT*0.3, WALL_THICKNESS, 'bedroom'); // above door
+makeDoor(BED.x + 2.8, 0, 0, 0.7, 2.15, 0, new THREE.MeshStandardMaterial({ color: 0xc8b898, roughness: 0.7 }));
+
+// West wall of bedroom (x=1.2) - shared with hallway
+makeWall(BED.x, WALL_HEIGHT/2, BED.z + BED.d/2, WALL_THICKNESS, WALL_HEIGHT, BED.d, 'bedroom');
+
+// Bedroom window on south wall
+makeWindow(BED.x + BED.w/2, 1.6, BED.z, 1.0, 1.0, 0);
+
+// --- Hallway floor and ceiling ---
+makeCeiling(HALLWAY.x, -3.3, HALLWAY.w, 3.3);
+
+// --- Bathroom (west of hallway) ---
+const BATH = { x: -1.5, z: -2.0, w: 1.5, d: 2.0 };
+makeFloor(BATH.x, BATH.z, BATH.w, BATH.d);
+makeCeiling(BATH.x, BATH.z, BATH.w, BATH.d);
+
+// Bathroom walls
+makeWall(BATH.x, WALL_HEIGHT/2, BATH.z + BATH.d/2, WALL_THICKNESS, WALL_HEIGHT, BATH.d, 'bathroom'); // west
+makeWall(BATH.x + BATH.w/2, WALL_HEIGHT/2, BATH.z, BATH.w, WALL_HEIGHT, WALL_THICKNESS, 'bathroom'); // south
+// East wall (shared with hallway) - with door
+makeWall(0, WALL_HEIGHT/2, BATH.z + 0.45, WALL_THICKNESS, WALL_HEIGHT, 0.9, 'bathroom'); // below door
+makeWall(0, WALL_HEIGHT*0.85, BATH.z + 1.3, WALL_THICKNESS, WALL_HEIGHT*0.3, 0.6, 'bathroom'); // above door
+makeDoor(0, 0, BATH.z + 1.3, 0.6, 2.1, Math.PI/2, new THREE.MeshStandardMaterial({ color: 0xd4c9a8, roughness: 0.8 }));
+// North wall segment
+makeWall(BATH.x + BATH.w/2, WALL_HEIGHT/2, 0, BATH.w, WALL_HEIGHT, WALL_THICKNESS, 'bathroom');
+
+// Bathroom window (small, high)
+makeWindow(BATH.x + BATH.w/2, 2.2, BATH.z, 0.5, 0.5, 0);
+
+// ==================== KITCHEN FIXTURES ====================
+// Kitchen counter along north wall
+const counterMat = new THREE.MeshStandardMaterial({ color: 0xc8b898, roughness: 0.4, metalness: 0.05 });
+const counterBaseMat = new THREE.MeshStandardMaterial({ color: 0xe8ddd0, roughness: 0.6 });
+
+// Counter base
+const counterBase = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.85, 0.6), counterBaseMat);
+counterBase.position.set(1.5, 0.425, 4.1);
+counterBase.castShadow = true;
+counterBase.receiveShadow = true;
+scene.add(counterBase);
+
+// Counter top
+const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.04, 0.65), counterMat);
+counterTop.position.set(1.5, 0.87, 4.1);
+counterTop.castShadow = true;
+scene.add(counterTop);
+
+// Upper cabinets
+const cabinetMat = new THREE.MeshStandardMaterial({ color: 0x8B6914, roughness: 0.5 });
+const upperCab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 0.35), cabinetMat);
+upperCab.position.set(1.4, 2.2, 4.3);
+upperCab.castShadow = true;
+scene.add(upperCab);
+
+// Fridge
+const fridgeMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.3, metalness: 0.6 });
+const fridge = new THREE.Mesh(new THREE.BoxGeometry(0.65, 1.7, 0.65), fridgeMat);
+fridge.position.set(3.2, 0.85, 4.1);
+fridge.castShadow = true;
+scene.add(fridge);
+
+// Bathroom fixtures
+// Toilet
+const toiletBase = new THREE.Mesh(
+  new THREE.BoxGeometry(0.4, 0.4, 0.55),
+  new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3 })
+);
+toiletBase.position.set(BATH.x + 0.8, 0.2, BATH.z + 0.4);
+scene.add(toiletBase);
+
+const toiletTank = new THREE.Mesh(
+  new THREE.BoxGeometry(0.35, 0.8, 0.15),
+  new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.3 })
+);
+toiletTank.position.set(BATH.x + 0.8, 0.8, BATH.z + 0.12);
+scene.add(toiletTank);
+
+// ==================== FURNITURE SYSTEM ====================
+const furnitureInScene = [];
+let selectedFurniture = null;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+const FURNITURE_CATALOG = [
+  { id: 'sofa', name: 'Sofa', nameHe: 'ספה', w: 2.0, h: 0.8, d: 0.9, color: 0x1a5c5c, icon: '🛋️' },
+  { id: 'bed', name: 'Double Bed', nameHe: 'מיטה זוגית', w: 1.6, h: 0.5, d: 2.0, color: 0x8B7355, icon: '🛏️' },
+  { id: 'single_bed', name: 'Single Bed', nameHe: 'מיטה יחיד', w: 0.9, h: 0.45, d: 2.0, color: 0x8B7355, icon: '🛏️' },
+  { id: 'dining_table', name: 'Dining Table', nameHe: 'שולחן אוכל', w: 1.2, h: 0.75, d: 0.8, color: 0x5C4033, icon: '🪑' },
+  { id: 'desk', name: 'Desk', nameHe: 'שולחן כתיבה', w: 1.2, h: 0.75, d: 0.6, color: 0x6B4423, icon: '🪑' },
+  { id: 'chair', name: 'Chair', nameHe: 'כיסא', w: 0.45, h: 0.85, d: 0.45, color: 0x5C4033, icon: '🪑' },
+  { id: 'wardrobe', name: 'Wardrobe', nameHe: 'ארון בגדים', w: 1.2, h: 2.0, d: 0.6, color: 0xD2B48C, icon: '🚪' },
+  { id: 'bookshelf', name: 'Bookshelf', nameHe: 'כוננית', w: 0.8, h: 1.8, d: 0.35, color: 0x8B6914, icon: '📚' },
+  { id: 'tv_stand', name: 'TV Stand', nameHe: 'מזנון טלוויזיה', w: 1.5, h: 0.5, d: 0.4, color: 0x333333, icon: '📺' },
+  { id: 'coffee_table', name: 'Coffee Table', nameHe: 'שולחן סלון', w: 1.0, h: 0.4, d: 0.6, color: 0x5C4033, icon: '☕' },
+  { id: 'rug', name: 'Rug (2x1.5m)', nameHe: 'שטיח', w: 2.0, h: 0.02, d: 1.5, color: 0x8B4513, icon: '🟫' },
+  { id: 'plant', name: 'Plant', nameHe: 'צמח', w: 0.4, h: 1.0, d: 0.4, color: 0x228B22, icon: '🌿' },
+];
+
+function createFurnitureMesh(item) {
+  const group = new THREE.Group();
+
+  if (item.id === 'sofa') {
+    // Seat
+    const seat = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.35, item.d),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.8 })
+    );
+    seat.position.y = 0.25;
+    seat.castShadow = true;
+    group.add(seat);
+    // Back
+    const back = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.45, 0.15),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.8 })
+    );
+    back.position.set(0, 0.55, -item.d/2 + 0.075);
+    back.castShadow = true;
+    group.add(back);
+    // Arms
+    for (let side of [-1, 1]) {
+      const arm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.3, item.d),
+        new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.8 })
+      );
+      arm.position.set(side * (item.w/2 - 0.06), 0.5, 0);
+      arm.castShadow = true;
+      group.add(arm);
+    }
+    // Cushions
+    for (let i = -1; i <= 1; i += 2) {
+      const cushion = new THREE.Mesh(
+        new THREE.BoxGeometry(item.w/2 - 0.15, 0.12, item.d - 0.2),
+        new THREE.MeshStandardMaterial({ color: new THREE.Color(item.color).multiplyScalar(0.85), roughness: 0.9 })
+      );
+      cushion.position.set(i * item.w/4, 0.48, 0.05);
+      group.add(cushion);
+    }
+  } else if (item.id === 'bed' || item.id === 'single_bed') {
+    // Frame
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.3, item.d),
+      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.5 })
+    );
+    frame.position.y = 0.15;
+    frame.castShadow = true;
+    group.add(frame);
+    // Mattress
+    const mattress = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w - 0.05, 0.2, item.d - 0.05),
+      new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.9 })
+    );
+    mattress.position.y = 0.4;
+    group.add(mattress);
+    // Pillow
+    const pillow = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w * 0.7, 0.08, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 })
+    );
+    pillow.position.set(0, 0.54, -item.d/2 + 0.25);
+    group.add(pillow);
+    // Headboard
+    const headboard = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.6, 0.05),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.7 })
+    );
+    headboard.position.set(0, 0.6, -item.d/2);
+    headboard.castShadow = true;
+    group.add(headboard);
+  } else if (item.id === 'dining_table' || item.id === 'desk' || item.id === 'coffee_table') {
+    // Top
+    const top = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.04, item.d),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 })
+    );
+    top.position.y = item.h;
+    top.castShadow = true;
+    group.add(top);
+    // Legs
+    const legGeo = new THREE.CylinderGeometry(0.025, 0.025, item.h, 8);
+    const legMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 });
+    for (let dx of [-1, 1]) {
+      for (let dz of [-1, 1]) {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(dx * (item.w/2 - 0.05), item.h/2, dz * (item.d/2 - 0.05));
+        leg.castShadow = true;
+        group.add(leg);
+      }
+    }
+  } else if (item.id === 'chair') {
+    // Seat
+    const seat = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, 0.04, item.w),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 })
+    );
+    seat.position.y = 0.45;
+    seat.castShadow = true;
+    group.add(seat);
+    // Legs
+    const legGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.45, 8);
+    const legMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 });
+    for (let dx of [-1, 1]) {
+      for (let dz of [-1, 1]) {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(dx * 0.17, 0.225, dz * 0.17);
+        group.add(leg);
+      }
+    }
+    // Back
+    const back = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w - 0.05, 0.4, 0.03),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.5 })
+    );
+    back.position.set(0, 0.67, -0.2);
+    back.castShadow = true;
+    group.add(back);
+  } else if (item.id === 'wardrobe' || item.id === 'bookshelf' || item.id === 'tv_stand') {
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, item.h, item.d),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.6 })
+    );
+    body.position.y = item.h / 2;
+    body.castShadow = true;
+    group.add(body);
+
+    if (item.id === 'bookshelf') {
+      // Shelves
+      for (let i = 1; i < 5; i++) {
+        const shelf = new THREE.Mesh(
+          new THREE.BoxGeometry(item.w - 0.04, 0.02, item.d - 0.02),
+          new THREE.MeshStandardMaterial({ color: 0x9B7B3B, roughness: 0.5 })
+        );
+        shelf.position.y = i * item.h / 5;
+        group.add(shelf);
+      }
+    }
+  } else if (item.id === 'rug') {
+    const rug = new THREE.Mesh(
+      new THREE.PlaneGeometry(item.w, item.d),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.95, side: THREE.DoubleSide })
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.y = 0.01;
+    rug.receiveShadow = true;
+    group.add(rug);
+  } else if (item.id === 'plant') {
+    // Pot
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.1, 0.2, 12),
+      new THREE.MeshStandardMaterial({ color: 0xB87333, roughness: 0.7 })
+    );
+    pot.position.y = 0.1;
+    group.add(pot);
+    // Foliage (sphere)
+    const foliage = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 12, 12),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.9 })
+    );
+    foliage.position.y = 0.55;
+    foliage.castShadow = true;
+    group.add(foliage);
+  } else {
+    // Default box
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(item.w, item.h, item.d),
+      new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.6 })
+    );
+    box.position.y = item.h / 2;
+    box.castShadow = true;
+    group.add(box);
+  }
+
+  group.userData = { ...item, isFurniture: true };
+  return group;
+}
+
+function addFurniture(itemId) {
+  const item = FURNITURE_CATALOG.find(f => f.id === itemId);
+  if (!item) return;
+
+  const mesh = createFurnitureMesh(item);
+  // Place in center of currently selected room
+  const room = currentRoom;
+  let cx, cz;
+  if (room === 'living') { cx = 2.5; cz = 2.25; }
+  else if (room === 'bedroom') { cx = BED.x + BED.w/2; cz = BED.z + BED.d/2; }
+  else if (room === 'bathroom') { cx = BATH.x + BATH.w/2; cz = BATH.z + BATH.d/2; }
+  else { cx = 0.6; cz = -1.65; }
+
+  mesh.position.set(cx, 0, cz);
+  scene.add(mesh);
+  furnitureInScene.push(mesh);
+  selectFurnitureItem(mesh);
+}
+
+// ==================== INTERACTION ====================
+let isDragging = false;
+let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let dragOffset = new THREE.Vector3();
+
+function selectFurnitureItem(mesh) {
+  // Deselect previous
+  if (selectedFurniture) {
+    selectedFurniture.traverse(child => {
+      if (child.isMesh && child.material) {
+        child.material.emissive?.setHex(0x000000);
+      }
+    });
+  }
+
+  selectedFurniture = mesh;
+  if (mesh) {
+    mesh.traverse(child => {
+      if (child.isMesh && child.material && child.material.emissive) {
+        child.material.emissive.setHex(0x222244);
+      }
+    });
+    document.getElementById('selected-name').textContent = mesh.userData.nameHe || mesh.userData.name;
+    document.getElementById('selected-info').classList.add('visible');
+  } else {
+    document.getElementById('selected-info').classList.remove('visible');
+  }
+}
+
+window.rotateSelected = function() {
+  if (selectedFurniture) {
+    selectedFurniture.rotation.y += Math.PI / 2;
+  }
+};
+
+window.deleteSelected = function() {
+  if (selectedFurniture) {
+    scene.remove(selectedFurniture);
+    furnitureInScene.splice(furnitureInScene.indexOf(selectedFurniture), 1);
+    selectedFurniture = null;
+    document.getElementById('selected-info').classList.remove('visible');
+  }
+};
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  // Check furniture hits
+  const allMeshes = [];
+  furnitureInScene.forEach(group => {
+    group.traverse(child => {
+      if (child.isMesh) {
+        child.userData._parentGroup = group;
+        allMeshes.push(child);
+      }
+    });
+  });
+
+  const hits = raycaster.intersectObjects(allMeshes, false);
+  if (hits.length > 0) {
+    const parentGroup = hits[0].object.userData._parentGroup;
+    if (parentGroup) {
+      selectFurnitureItem(parentGroup);
+      isDragging = true;
+      controls.enabled = false;
+
+      const intersectPoint = new THREE.Vector3();
+      raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+      dragOffset.subVectors(parentGroup.position, intersectPoint);
+      return;
+    }
+  }
+
+  // Deselect if clicking empty space
+  selectFurnitureItem(null);
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!isDragging || !selectedFurniture) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersectPoint = new THREE.Vector3();
+  raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+
+  selectedFurniture.position.x = intersectPoint.x + dragOffset.x;
+  selectedFurniture.position.z = intersectPoint.z + dragOffset.z;
+});
+
+renderer.domElement.addEventListener('pointerup', () => {
+  isDragging = false;
+  controls.enabled = true;
+});
+
+// ==================== COLOR SYSTEM ====================
+let currentRoom = 'living';
+
+const COLOR_PALETTE = [
+  '#FFFFFF', '#F5F0EB', '#FFF8E7', '#FFEEDD', '#FFE4C4', '#FFDAB9',
+  '#E8E4D9', '#D4C5A9', '#C8B898', '#B8A88A', '#A89070', '#8B7D6B',
+  '#E0EBE0', '#C8DBC8', '#A8C8A8', '#8FBC8F', '#6B8E6B', '#4A6741',
+  '#E0E8F0', '#C8D8E8', '#A8C0D8', '#8BB0CC', '#6B96B4', '#4A7A9B',
+  '#F0E0E8', '#E8C8D8', '#D8A8C0', '#CC8BAA', '#B46B92', '#943A6B',
+  '#F5F5DC', '#FFE4B5', '#DEB887', '#D2B48C', '#BC8F8F', '#A0522D',
+];
+
+const colorGrid = document.getElementById('color-grid');
+COLOR_PALETTE.forEach(color => {
+  const swatch = document.createElement('div');
+  swatch.className = 'color-swatch';
+  swatch.style.backgroundColor = color;
+  swatch.onclick = () => setWallColor(color);
+  colorGrid.appendChild(swatch);
+});
+
+document.getElementById('custom-color').addEventListener('input', (e) => {
+  setWallColor(e.target.value);
+});
+
+function setWallColor(color) {
+  wallColors[currentRoom] = color;
+  wallMaterials[currentRoom].color.set(color);
+
+  // Update active swatch
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('active', s.style.backgroundColor === color ||
+      rgbToHex(s.style.backgroundColor) === color.toUpperCase());
+  });
+}
+
+function rgbToHex(rgb) {
+  if (rgb.startsWith('#')) return rgb.toUpperCase();
+  const match = rgb.match(/\d+/g);
+  if (!match) return '';
+  return '#' + match.slice(0, 3).map(n => parseInt(n).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+window.selectRoom = function(room) {
+  currentRoom = room;
+  document.querySelectorAll('.room-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.room === room);
+  });
+  // Update color swatch highlight
+  const activeColor = wallColors[room];
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    const swatchColor = rgbToHex(s.style.backgroundColor);
+    s.classList.toggle('active', swatchColor === activeColor.toUpperCase());
+  });
+};
+
+// ==================== FURNITURE LIST UI ====================
+const furnitureList = document.getElementById('furniture-list');
+FURNITURE_CATALOG.forEach(item => {
+  const el = document.createElement('div');
+  el.className = 'furniture-item';
+  el.innerHTML = `
+    <span class="icon">${item.icon}</span>
+    <div class="info">
+      <div class="name">${item.nameHe}</div>
+      <div class="size">${item.w}m x ${item.d}m</div>
+    </div>
+    <button class="add-btn" onclick="addFurniture('${item.id}')">+</button>
+  `;
+  furnitureList.appendChild(el);
+});
+
+window.addFurniture = addFurniture;
+
+// ==================== CAMERA VIEWS ====================
+window.setView = function(view) {
+  const tween = { duration: 800 };
+  let pos, target;
+
+  switch(view) {
+    case 'perspective':
+      pos = { x: 8, y: 7, z: 10 };
+      target = { x: 3, y: 1.5, z: 2 };
+      break;
+    case 'top':
+      pos = { x: 2.5, y: 12, z: 0 };
+      target = { x: 2.5, y: 0, z: 0 };
+      break;
+    case 'living':
+      pos = { x: 2.5, y: 1.6, z: 0.5 };
+      target = { x: 2.5, y: 1.5, z: 4 };
+      break;
+    case 'bedroom':
+      pos = { x: BED.x + BED.w/2, y: 1.6, z: -0.5 };
+      target = { x: BED.x + BED.w/2, y: 1.2, z: BED.z + BED.d/2 };
+      break;
+    case 'walkthrough':
+      startWalkthrough();
+      return;
+  }
+
+  animateCamera(pos, target);
+};
+
+function animateCamera(pos, target) {
+  const startPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+  const startTarget = { x: controls.target.x, y: controls.target.y, z: controls.target.z };
+  const duration = 1000;
+  const start = performance.now();
+
+  function update(time) {
+    const elapsed = time - start;
+    const t = Math.min(elapsed / duration, 1);
+    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    camera.position.set(
+      startPos.x + (pos.x - startPos.x) * ease,
+      startPos.y + (pos.y - startPos.y) * ease,
+      startPos.z + (pos.z - startPos.z) * ease
+    );
+    controls.target.set(
+      startTarget.x + (target.x - startTarget.x) * ease,
+      startTarget.y + (target.y - startTarget.y) * ease,
+      startTarget.z + (target.z - startTarget.z) * ease
+    );
+
+    if (t < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+let walkthroughActive = false;
+function startWalkthrough() {
+  walkthroughActive = true;
+  const waypoints = [
+    { pos: { x: 2.5, y: 1.6, z: 0.8 }, look: { x: 2.5, y: 1.5, z: 3 } },
+    { pos: { x: 2.5, y: 1.6, z: 3.5 }, look: { x: 1.5, y: 1.5, z: 4.2 } },
+    { pos: { x: 0.6, y: 1.6, z: 0.5 }, look: { x: 0.6, y: 1.5, z: -1.5 } },
+    { pos: { x: 3, y: 1.6, z: -1.5 }, look: { x: 4, y: 1.2, z: -2.5 } },
+    { pos: { x: 2.5, y: 1.6, z: 0.8 }, look: { x: 2.5, y: 1.5, z: 3 } },
+  ];
+
+  let i = 0;
+  function nextWaypoint() {
+    if (i >= waypoints.length || !walkthroughActive) {
+      walkthroughActive = false;
+      return;
+    }
+    animateCamera(waypoints[i].pos, waypoints[i].look);
+    i++;
+    setTimeout(nextWaypoint, 2500);
+  }
+  nextWaypoint();
+}
+
+// ==================== MINIMAP ====================
+function drawMinimap() {
+  const canvas = document.getElementById('minimap');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+  ctx.scale(2, 2);
+
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  const scale = 18;
+  const offsetX = w/2 - 2 * scale;
+  const offsetY = h/2 + 1 * scale;
+
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, w, h);
+
+  function drawRoom(rx, rz, rw, rd, color, label) {
+    const sx = offsetX + rx * scale;
+    const sy = offsetY - (rz + rd) * scale;
+    const sw = rw * scale;
+    const sh = rd * scale;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx, sy, sw, sh);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, sx + sw/2, sy + sh/2 + 3);
+  }
+
+  // Draw rooms with colors matching wall colors
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  drawRoom(0, 0, LIVING.w, LIVING.d, hexToRgba(wallColors.living, 0.3), 'סלון + מטבח');
+  drawRoom(HALLWAY.x, -3.3, HALLWAY.w, 3.3, hexToRgba(wallColors.hallway, 0.25), 'מסדרון');
+  drawRoom(BED.x, BED.z, BED.w, BED.d, hexToRgba(wallColors.bedroom, 0.3), 'חדר שינה');
+  drawRoom(BATH.x, BATH.z, BATH.w, BATH.d, hexToRgba(wallColors.bathroom, 0.25), 'אמבטיה');
+
+  // Draw furniture
+  furnitureInScene.forEach(f => {
+    const fx = offsetX + f.position.x * scale;
+    const fy = offsetY - f.position.z * scale;
+    ctx.fillStyle = f === selectedFurniture ? 'rgba(99, 102, 241, 0.8)' : 'rgba(200, 200, 100, 0.5)';
+    ctx.fillRect(fx - 3, fy - 3, 6, 6);
+  });
+
+  // Camera indicator
+  const cx = offsetX + camera.position.x * scale;
+  const cy = offsetY - camera.position.z * scale;
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ==================== PANEL TOGGLE ====================
+window.togglePanel = function() {
+  document.getElementById('panel').classList.toggle('collapsed');
+  document.getElementById('toggle-panel').classList.toggle('collapsed');
+  document.getElementById('toggle-panel').textContent =
+    document.getElementById('panel').classList.contains('collapsed') ? '▶' : '◀';
+};
+
+// ==================== RESIZE ====================
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ==================== ANIMATION LOOP ====================
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+
+  // Update minimap every 30 frames
+  if (performance.now() % 500 < 17) drawMinimap();
+}
+
+animate();
+drawMinimap();
+
+// Fade out instructions
+setTimeout(() => {
+  document.getElementById('instructions').style.opacity = '0';
+}, 5000);
+
+</script>
+</body>
+</html>
