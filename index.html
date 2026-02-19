@@ -164,7 +164,7 @@ scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 30, 60);
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(8, 12, -4);
+camera.position.set(3, 18, 5.5);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -176,7 +176,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.08;
-controls.target.set(2.5, 1, 6);
+controls.target.set(3, 0, 5.5);
 
 // ============ REALISTIC LIGHTING ============
 // Soft ambient (simulates bounced light)
@@ -813,7 +813,7 @@ function getState(){
     z: f.position.z,
     rotY: f.rotation.y
   }));
-  return { items, wallColors: {...wallColors}, version: 2 };
+  return { items, wallColors: {...wallColors}, version: 3 };
 }
 
 function loadState(state){
@@ -865,7 +865,7 @@ const saved = localStorage.getItem(STORAGE_KEY);
 if(saved){
   try {
     const state = JSON.parse(saved);
-    if(state.version >= 2) loadState(state);
+    if(state.version >= 3) loadState(state);
     else placeDefaults();
   } catch(e){ placeDefaults(); }
 } else {
@@ -1009,8 +1009,8 @@ function animCam(pos, tgt){
 }
 window.setView = v => {
   switch(v){
-    case 'perspective': animCam({x:8,y:12,z:-4},{x:2.5,y:1,z:6}); break;
-    case 'top': animCam({x:2.8,y:16,z:5},{x:2.8,y:0,z:5}); break;
+    case 'perspective': animCam({x:-4,y:10,z:14},{x:2.5,y:1,z:5}); break;
+    case 'top': animCam({x:3,y:18,z:5.5},{x:3,y:0,z:5.5}); break;
     case 'living': animCam({x:2.25,y:1.6,z:5.5},{x:2.25,y:1.5,z:8}); break;
     case 'bedroom': animCam({x:2.85,y:1.6,z:4.5},{x:2.85,y:1,z:2}); break;
     case 'walkthrough':
@@ -1104,6 +1104,24 @@ function drawMinimap(){
   ctx.fillText('N ↑', ox+2.5*sc, oy-12*sc);
   ctx.fillText('STREET (S)', ox+2.5*sc, oy+10);
 }
+
+// 3D compass/label markers
+function addTextSprite(text, x, y, z, color='#ffffff') {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = color; ctx.font = 'bold 36px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 42);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({map: tex, transparent: true, opacity: 0.6});
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.set(x, y, z); sprite.scale.set(2, 0.5, 1);
+  scene.add(sprite);
+}
+addTextSprite('STREET (S)', 2.8, 0.1, -1.5, '#ffcc44');
+addTextSprite('N', 2.8, 0.1, 12.5, '#44aaff');
+addTextSprite('חדר שינה', 2.85, 0.1, 2.4, '#ffffff');
+addTextSprite('סלון + מטבח', 2.25, 0.1, 7.4, '#ffffff');
 
 window.togglePanel = () => {
   document.getElementById('panel').classList.toggle('collapsed');
