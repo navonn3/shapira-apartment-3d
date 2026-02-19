@@ -164,7 +164,7 @@ scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 30, 60);
 
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(10, 11, 0);
+camera.position.set(8, 12, -4);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -176,7 +176,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 container.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.08;
-controls.target.set(2.5, 1, 5);
+controls.target.set(2.5, 1, 6);
 
 // ============ REALISTIC LIGHTING ============
 // Soft ambient (simulates bounced light)
@@ -474,7 +474,7 @@ const furnitureInScene = []; let selectedFurniture = null;
 const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
 
 const FURNITURE_CATALOG = [
-  {id:'brown_sofa',name:'Brown Leather Sofa',nameHe:'ספה חומה',w:2.2,h:0.8,d:0.9,color:0x7B5E3E,icon:'&#x1F6CB;'},
+  {id:'brown_sofa',name:'Tufted Sofa',nameHe:'ספה חומה',w:2.2,h:0.8,d:0.9,color:0xC8A872,icon:'&#x1F6CB;'},
   {id:'lack_table',name:'LACK Coffee Table',nameHe:'שולחן LACK',w:0.55,h:0.45,d:0.55,color:0xf5f5f0,icon:'&#9749;'},
   {id:'lack_bench',name:'LACK Bench',nameHe:'ספסל LACK',w:0.9,h:0.45,d:0.55,color:0xf5f5f0,icon:'&#9749;'},
   {id:'tv50',name:'50" TV + Stand',nameHe:'טלוויזיה 50"',w:1.15,h:0.5,d:0.4,color:0x222222,icon:'&#x1F4FA;'},
@@ -504,19 +504,50 @@ function createFurnitureMesh(item){
   function m(geo, material, x, y, z){ const mesh = new THREE.Mesh(geo, material); mesh.position.set(x,y,z); return mesh; }
 
   if(item.id === 'brown_sofa'){
-    // Realistic leather sofa
-    const leather = mat(0x6B4E2E, 0.75);
-    const cushion = mat(0x7B5E3E, 0.8);
-    g.add(m(new THREE.BoxGeometry(item.w, .22, item.d), leather, 0, .22, 0)); // base
-    g.add(m(new THREE.BoxGeometry(item.w, .48, .1), leather, 0, .55, -item.d/2+.05)); // backrest
-    for(const s of [-1,1]) g.add(m(new THREE.BoxGeometry(.1, .32, item.d), leather, s*(item.w/2-.05), .48, 0)); // arms
-    // Seat cushions
-    g.add(m(new THREE.BoxGeometry(item.w/2-.05, .1, item.d-.18), cushion, -item.w/4, .38, .04));
-    g.add(m(new THREE.BoxGeometry(item.w/2-.05, .1, item.d-.18), cushion, item.w/4, .38, .04));
-    // Legs
-    const legMat = mat(0x2a2a2a, 0.3, 0.5);
+    // Tan/camel tufted fabric sofa (matches real furniture)
+    const fabric = mat(0xC8A872, 0.88);
+    const fabricDark = mat(0xB89862, 0.9);
+    // Base/frame
+    g.add(m(new THREE.BoxGeometry(item.w, .15, item.d), mat(0x8B7355, 0.7), 0, .15, 0));
+    // Seat - tufted cushion
+    g.add(m(new THREE.BoxGeometry(item.w-.12, .12, item.d-.14), fabric, 0, .28, .03));
+    // Tufting buttons on seat (3x2 grid)
+    for(let bx=-1;bx<=1;bx++) for(let bz=0;bz<=1;bz++){
+      g.add(m(new THREE.CylinderGeometry(.012,.012,.02,8), fabricDark, bx*.32, .35, bz*.2-.05));
+      // Tufting dimple
+      g.add(m(new THREE.SphereGeometry(.025,6,6), fabricDark, bx*.32, .33, bz*.2-.05));
+    }
+    // Backrest - tufted
+    g.add(m(new THREE.BoxGeometry(item.w-.12, .42, .12), fabric, 0, .52, -item.d/2+.08));
+    // Tufting on backrest
+    for(let bx=-2;bx<=2;bx++) for(let by=0;by<=1;by++){
+      g.add(m(new THREE.SphereGeometry(.018,6,6), fabricDark, bx*.22, .4+by*.18, -item.d/2+.02));
+    }
+    // Cylindrical bolster arms
+    for(const s of [-1,1]){
+      g.add(m(new THREE.CylinderGeometry(.08,.08,item.d-.05,12), fabric, s*(item.w/2-.06), .38, .02));
+      // Rotate bolster to lay along Z axis
+      const bolster = new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,item.d-.05,12), fabric);
+      bolster.rotation.x = Math.PI/2; bolster.position.set(s*(item.w/2-.06), .38, .02);
+      g.add(bolster);
+    }
+    // Decorative ethnic/kilim throw pillows
+    const pillow1 = mat(0x8B2020, 0.85); // burgundy/red
+    const pillow2 = mat(0xDDCC88, 0.85); // cream accent
+    for(const [px, pMat] of [[-0.55, pillow1],[0.55, pillow1]]){
+      const pg = new THREE.Group();
+      pg.add(m(new THREE.BoxGeometry(.3,.3,.08), pMat, 0, 0, 0));
+      // Diamond pattern
+      pg.add(m(new THREE.BoxGeometry(.12,.12,.005), pillow2, 0, 0, .042));
+      pg.add(m(new THREE.BoxGeometry(.06,.06,.005), pMat, 0, 0, .044));
+      pg.rotation.z = 0.15 * (px > 0 ? -1 : 1);
+      pg.position.set(px, .52, -item.d/2+.15);
+      g.add(pg);
+    }
+    // Short wooden legs
+    const legMat = mat(0x4a3520, 0.5);
     for(const dx of [-1,1]) for(const dz of [-1,1])
-      g.add(m(new THREE.CylinderGeometry(.02,.02,.08,8), legMat, dx*(item.w/2-.08), .04, dz*(item.d/2-.08)));
+      g.add(m(new THREE.CylinderGeometry(.018,.015,.07,8), legMat, dx*(item.w/2-.1), .035, dz*(item.d/2-.08)));
 
   } else if(item.id === 'tv50'){
     // TV stand (white wood)
@@ -978,7 +1009,7 @@ function animCam(pos, tgt){
 }
 window.setView = v => {
   switch(v){
-    case 'perspective': animCam({x:10,y:11,z:0},{x:2.5,y:1,z:5}); break;
+    case 'perspective': animCam({x:8,y:12,z:-4},{x:2.5,y:1,z:6}); break;
     case 'top': animCam({x:2.8,y:16,z:5},{x:2.8,y:0,z:5}); break;
     case 'living': animCam({x:2.25,y:1.6,z:5.5},{x:2.25,y:1.5,z:8}); break;
     case 'bedroom': animCam({x:2.85,y:1.6,z:4.5},{x:2.85,y:1,z:2}); break;
